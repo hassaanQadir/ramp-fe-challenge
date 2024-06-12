@@ -6,7 +6,7 @@ import { useEmployees } from "./hooks/useEmployees"
 import { usePaginatedTransactions } from "./hooks/usePaginatedTransactions"
 import { useTransactionsByEmployee } from "./hooks/useTransactionsByEmployee"
 import { EMPTY_EMPLOYEE } from "./utils/constants"
-import { Employee } from "./utils/types"
+import { Employee, Transaction } from "./utils/types"
 
 export function App() {
   const { data: employees, ...employeeUtils } = useEmployees()
@@ -14,11 +14,7 @@ export function App() {
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
   const [currentEmployee, setCurrentEmployee] = useState<Employee>(EMPTY_EMPLOYEE)
-
-  const transactions = useMemo(
-    () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
-    [paginatedTransactions, transactionsByEmployee]
-  )
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null)
 
   const loadAllTransactions = useCallback(async () => {
     setIsLoading(true)
@@ -42,6 +38,19 @@ export function App() {
       loadAllTransactions()
     }
   }, [employeeUtils.loading, employees, loadAllTransactions])
+
+  useEffect(() => {
+    setTransactions(paginatedTransactions?.data ?? transactionsByEmployee ?? null)
+  }, [paginatedTransactions, transactionsByEmployee])
+
+  const handleTransactionApproval = useCallback((transactionId: string, newValue: boolean) => {
+    setTransactions(
+      (prevTransactions) =>
+        prevTransactions?.map((transaction) =>
+          transaction.id === transactionId ? { ...transaction, approved: newValue } : transaction
+        ) ?? null
+    )
+  }, [])
 
   return (
     <Fragment>
@@ -79,7 +88,7 @@ export function App() {
         <div className="RampBreak--l" />
 
         <div className="RampGrid">
-          <Transactions transactions={transactions} />
+          <Transactions transactions={transactions} onTransactionApproval={handleTransactionApproval} />
 
           {transactions !== null &&
             currentEmployee === EMPTY_EMPLOYEE &&
